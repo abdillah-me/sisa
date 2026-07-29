@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SISA — Prototipe UI (High-Fidelity)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FBF2E4;
+    --paper:#FFFCF6;
+    --paper-warm:#FCF6EC;
+    --ink:#2A1C12;
+    --ink-soft:#4A3A2C;
+    --muted:#8A7462;
+    --muted-light:#B7A692;
+    --line:#EBDFC9;
+    --terracotta:#D9622B;
+    --terracotta-deep:#AD4A1E;
+    --terracotta-soft:#FBE1CF;
+    --marigold:#EFA23A;
+    --marigold-deep:#C97F1E;
+    --marigold-soft:#FBEACB;
+    --forest:#2F5D45;
+    --forest-deep:#1C3A2A;
+    --forest-soft:#DEEBE0;
+    --crimson:#B23A2E;
+    --crimson-soft:#F6DEDA;
+    --white:#ffffff;
+    --r-lg:26px; --r-md:18px; --r-sm:13px;
+    --shadow-card:0 1px 2px rgba(42,28,18,.04), 0 10px 24px -12px rgba(42,28,18,.22);
+    --shadow-pop:0 1px 2px rgba(42,28,18,.05), 0 20px 40px -12px rgba(42,28,18,.32);
+    --font-display:'Fraunces', Georgia, serif;
+    --font-body:'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--cream);
+    font-family:var(--font-body);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  /* subtle grain texture, reused on any surface via .grain */
+  .grain{ position:relative; }
+  .grain::after{
+    content:""; position:absolute; inset:0; pointer-events:none; z-index:5; opacity:.05; mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  /* ---------- Toolbar (viewer chrome, not part of the product UI) ---------- */
+  .toolbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:16px 28px;
+    background:rgba(251,242,228,.9);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .toolbar .brand{display:flex; align-items:center; gap:10px;}
+  .toolbar .brand .mark{
+    width:30px; height:30px; border-radius:9px; background:var(--forest);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; color:var(--white); font-size:15px; font-family:var(--font-display);
+  }
+  .toolbar .brand .title{font-weight:700; font-size:15px; letter-spacing:.2px; color:var(--ink); font-family:var(--font-body);}
+  .toolbar .brand .sub{font-size:11px; color:var(--muted);}
+  .toolbar .controls{display:flex; align-items:center; gap:10px;}
+  .crumb{font-size:12px; color:var(--muted); padding:8px 14px; border:1px solid var(--line); border-radius:20px; background:var(--paper);}
+  .btn-toolbar{
+    font-family:var(--font-body); font-size:13px; font-weight:700; color:var(--white);
+    background:var(--terracotta); border:none; border-radius:12px; padding:10px 18px;
+    cursor:pointer; transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn-toolbar:hover{ box-shadow:0 8px 18px -6px rgba(217,98,43,.55); transform:translateY(-1px); }
+  .btn-toolbar.ghost{ background:transparent; color:var(--muted); border:1px solid var(--line); }
+  .btn-toolbar.ghost:hover{ color:var(--ink); box-shadow:none; }
+
+  .hint{
+    max-width:1200px; margin:18px auto 0; padding:0 28px;
+    font-size:12.5px; color:var(--muted-light); line-height:1.6;
+  }
+  .hint b{color:var(--muted);}
+
+  /* ---------- Stage ---------- */
+  .stage{
+    max-width:1400px; margin:0 auto; padding:28px;
+    display:flex; flex-wrap:wrap; gap:36px; justify-content:center;
+  }
+  .phone-wrap{ display:flex; flex-direction:column; align-items:center; gap:12px; }
+  .phone-wrap.hidden{ display:none; }
+  .frame-label{
+    font-size:12px; font-weight:700; color:var(--muted);
+    letter-spacing:.3px; display:flex; align-items:center; gap:8px;
+  }
+  .frame-label .n{
+    width:20px; height:20px; border-radius:6px; background:var(--paper);
+    border:1px solid var(--line); color:var(--terracotta);
+    display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800;
+  }
+
+  .phone{
+    width:375px; height:812px; border-radius:48px; overflow:hidden; position:relative;
+    background:var(--paper);
+    border:1px solid #EFE7D8;
+    box-shadow:0 34px 64px -22px rgba(40,26,14,.4), inset 0 0 0 6px #17110b;
+    display:none; flex-direction:column;
+  }
+  .phone.is-active{ display:flex; }
+  .stage.mode-gallery .phone{ display:flex; }
+  .stage.mode-gallery .phone-wrap.hidden{ display:flex; }
+
+  .notch{
+    position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    width:120px; height:26px; border-radius:14px; background:#17110b; z-index:40;
+  }
+  .screen-scroll{ flex:1; overflow-y:auto; position:relative; background:var(--paper); animation:screenIn .38s cubic-bezier(.2,.8,.2,1); }
+  .screen-scroll::-webkit-scrollbar{ width:0; }
+  @keyframes screenIn{ from{ opacity:0; transform:translateY(10px);} to{ opacity:1; transform:translateY(0);} }
+
+  .status-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:20px 24px 4px; font-size:13px; font-weight:700; color:var(--ink);
+  }
+  .status-row .icons{ display:flex; gap:5px; align-items:center; color:var(--muted); }
+
+  /* ---------- Icons ---------- */
+  .ic{ width:20px; height:20px; stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; display:block; }
+  .ic-sm{ width:16px; height:16px; }
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    font-family:var(--font-body); border:none; cursor:pointer; border-radius:16px;
+    padding:15px 22px; font-size:14.5px; font-weight:700; text-align:center;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:transform .12s ease, box-shadow .12s ease, filter .12s ease;
+  }
+  .btn:active{ transform:scale(.97); }
+  .btn-primary{ background:var(--terracotta); color:#fff; box-shadow:0 10px 22px -8px rgba(217,98,43,.55); }
+  .btn-primary:hover{ box-shadow:0 12px 26px -6px rgba(217,98,43,.65); }
+  .btn-secondary{ background:var(--forest-soft); color:var(--forest); }
+  .btn-secondary:hover{ background:#cee3d3; }
+  .btn-ghost{ background:transparent; color:var(--muted); border:1.5px solid var(--line); }
+  .btn-block{ width:100%; }
+
+  /* ---------- Cards ---------- */
+  .card{
+    background:var(--paper); border:1px solid var(--line);
+    border-radius:var(--r-lg); box-shadow:var(--shadow-card);
+  }
+  .field-label{ font-size:10.5px; font-weight:700; letter-spacing:.6px; color:var(--muted); text-transform:uppercase; margin-bottom:8px; display:block; }
+  .field{
+    display:flex; align-items:center; gap:10px;
+    background:var(--paper-warm); border:1px solid var(--line);
+    border-radius:14px; padding:14px 16px; font-size:14px; color:var(--muted);
+  }
+  .field input{
+    background:transparent; border:none; outline:none; color:var(--ink);
+    font-family:var(--font-body); font-size:14px; width:100%;
+  }
+  .field input::placeholder{ color:var(--muted-light); }
+
+  .badge{
+    display:inline-flex; align-items:center; gap:6px; padding:6px 12px 6px 10px;
+    border-radius:20px; font-size:10.5px; font-weight:800; letter-spacing:.3px;
+  }
+  .badge .dot{ width:6px; height:6px; border-radius:50%; }
+  .badge.success{ color:var(--forest); background:var(--forest-soft); }
+  .badge.success .dot{ background:var(--forest); }
+  .badge.warning{ color:var(--marigold-deep); background:var(--marigold-soft); }
+  .badge.warning .dot{ background:var(--marigold-deep); }
+  .badge.danger{ color:var(--crimson); background:var(--crimson-soft); animation:pulseDot 1.8s ease-in-out infinite; }
+  .badge.danger .dot{ background:var(--crimson); }
+  @keyframes pulseDot{ 0%,100%{ box-shadow:0 0 0 0 rgba(178,58,46,0);} 50%{ box-shadow:0 0 0 5px rgba(178,58,46,.12);} }
+
+  .back-btn{
+    width:38px; height:38px; border-radius:12px; background:var(--paper);
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center;
+    color:var(--ink); cursor:pointer; box-shadow:var(--shadow-card);
+  }
+  .back-btn:hover{ background:var(--paper-warm); }
+  .icon-btn{
+    width:40px; height:40px; border-radius:12px; background:var(--paper);
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center;
+    color:var(--muted); position:relative; cursor:pointer;
+  }
+  .icon-btn .ping{ position:absolute; top:8px; right:9px; width:8px; height:8px; border-radius:50%; background:var(--crimson); }
+
+  [data-nav]{ cursor:pointer; }
+
+  /* ---------- Bottom Nav ---------- */
+  .nav-bar{
+    position:relative; background:var(--paper); border-top:1px solid var(--line);
+    padding:10px 8px 26px; display:flex; align-items:center; justify-content:space-around;
+  }
+  .nav-item{ display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--muted-light); width:56px; transition:color .15s ease; }
+  .nav-item .ic{ width:21px; height:21px; }
+  .nav-item span{ font-size:9.5px; font-weight:700; }
+  .nav-item.active{ color:var(--terracotta); }
+  .nav-fab{
+    width:54px; height:54px; border-radius:18px; background:var(--terracotta);
+    display:flex; align-items:center; justify-content:center; box-shadow:0 12px 24px -6px rgba(217,98,43,.6);
+    color:var(--white); cursor:pointer; margin-top:-32px; transition:transform .15s ease;
+    transform:rotate(-6deg);
+  }
+  .nav-fab:hover{ transform:rotate(0deg) scale(1.05); }
+
+  /* ---------- Dish illustration system (no external photos) ---------- */
+  .dish-frame{ position:relative; overflow:hidden; border-radius:18px; flex-shrink:0; }
+  .dish-frame.round{ border-radius:50%; }
+  .dish-frame.nasiayam{ background:radial-gradient(120% 120% at 25% 15%, #FDEBD3, #F7CE9C 60%, #F0B87A 100%); }
+  .dish-frame.roti{ background:radial-gradient(120% 120% at 25% 15%, #F6E3C8, #EBC091 60%, #DDA268 100%); }
+  .dish-frame.kotak{ background:radial-gradient(120% 120% at 25% 15%, #F0F3E6, #D9E7C9 60%, #C3D9AE 100%); }
+  .dish-frame .shine{ position:absolute; width:55%; height:55%; top:-16%; left:-8%; background:rgba(255,255,255,.4); border-radius:50%; filter:blur(3px); }
+  .dish{ position:absolute; inset:0; }
+
+  .dish__rice{ position:absolute; left:14%; right:10%; bottom:8%; height:52%; background:linear-gradient(160deg,#FFFDF7,#F3E7D2); border-radius:48% 52% 44% 56%/58% 50% 50% 42%; box-shadow:inset 0 -4px 8px rgba(120,80,40,.12); }
+  .dish__rice::after{ content:""; position:absolute; inset:0; border-radius:inherit; opacity:.5;
+    background-image:radial-gradient(rgba(120,80,40,.16) 1px, transparent 1.3px); background-size:5px 5px; }
+  .dish__protein{ position:absolute; background:linear-gradient(155deg,#D98A3D,#A85A1F); border-radius:60% 40% 55% 45%/45% 55% 45% 55%; box-shadow:inset 2px -3px 5px rgba(70,35,5,.35), 0 3px 6px rgba(70,35,5,.2); }
+  .dish__protein.p1{ width:46%; height:34%; left:32%; top:22%; transform:rotate(-8deg); }
+  .dish__protein.p2{ width:36%; height:26%; left:14%; top:44%; transform:rotate(10deg); background:linear-gradient(155deg,#E3A056,#B6702A); }
+  .dish__garnish{ position:absolute; width:14%; height:14%; right:16%; top:20%; background:radial-gradient(circle at 30% 30%, #7FAE5C, #4C7C34); border-radius:40% 60% 55% 45%/55% 45% 60% 40%; box-shadow:0 2px 4px rgba(40,60,20,.25); }
+  .dish__chili{ position:absolute; width:22%; height:6%; right:10%; top:34%; background:linear-gradient(90deg,#C4402E,#8F2A1D); border-radius:8px; transform:rotate(-18deg); }
+  .dish__steam{ position:absolute; top:2%; left:50%; transform:translateX(-50%); display:flex; gap:9%; z-index:2; }
+  .dish__steam span{ width:5%; min-width:3px; height:26%; border-radius:6px; background:rgba(255,255,255,.65); display:block; animation:steamRise 3s ease-in-out infinite; }
+  .dish__steam span:nth-child(2){ animation-delay:.5s; height:22%; }
+  .dish__steam span:nth-child(3){ animation-delay:1s; height:28%; }
+  @keyframes steamRise{ 0%{ opacity:0; transform:translateY(6px) scaleY(.8);} 40%{ opacity:.9;} 100%{ opacity:0; transform:translateY(-10px) scaleY(1.1);} }
+
+  .dish__box{ position:absolute; left:10%; right:10%; bottom:10%; top:38%; background:linear-gradient(160deg,#FBE9CE,#E8C393); border-radius:14px; box-shadow:inset 0 3px 5px rgba(255,255,255,.5), 0 4px 8px rgba(120,80,30,.18); }
+  .dish__bun{ position:absolute; background:linear-gradient(155deg,#E8B573,#C4863F); border-radius:50% 50% 45% 45%/60% 60% 40% 40%; box-shadow:inset 0 -3px 5px rgba(110,65,15,.3); }
+  .dish__bun.b1{ width:44%; height:32%; left:10%; top:14%; transform:rotate(-4deg); }
+  .dish__bun.b2{ width:38%; height:28%; left:48%; top:22%; transform:rotate(6deg); background:linear-gradient(155deg,#EFC98A,#CE9550); }
+  .dish__ribbon{ position:absolute; left:0; right:0; bottom:16%; height:10%; background:repeating-linear-gradient(45deg, var(--terracotta), var(--terracotta) 8px, #fff0 8px, #fff0 16px); opacity:.85; }
+
+  .dish__box2{ position:absolute; left:12%; right:12%; bottom:12%; top:30%; background:linear-gradient(160deg,#FFFDF6,#EDE6D2); border-radius:10px; box-shadow:inset 0 3px 4px rgba(255,255,255,.6), 0 4px 8px rgba(70,90,40,.16); }
+  .dish__leaf{ position:absolute; width:60%; height:46%; right:-6%; top:2%; background:linear-gradient(150deg,#8FBE6C,#4C7C34); clip-path:polygon(100% 0, 100% 100%, 0 30%); box-shadow:0 4px 10px rgba(40,60,20,.2); }
+  .dish__rice2{ position:absolute; width:52%; height:34%; left:16%; bottom:16%; background:linear-gradient(160deg,#FFFDF7,#F3E7D2); border-radius:50% 50% 42% 58%/60% 60% 40% 40%; }
+
+  .food-card{ display:flex; gap:13px; padding:13px; cursor:pointer; opacity:0; animation:cardIn .5s ease forwards; }
+  .food-card:nth-child(1){ animation-delay:.05s; }
+  .food-card:nth-child(2){ animation-delay:.15s; }
+  .food-card:nth-child(3){ animation-delay:.25s; }
+  @keyframes cardIn{ from{ opacity:0; transform:translateY(14px);} to{ opacity:1; transform:translateY(0);} }
+  .food-card .dish-frame{ width:78px; height:78px; }
+  .food-card .fc-body{ flex:1; min-width:0; }
+  .food-card .fc-title{ font-family:var(--font-display); font-size:15px; font-weight:600; color:var(--ink); }
+  .food-card .fc-sub{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .food-card .fc-meta{ display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; }
+  .chip{ font-size:10px; font-weight:700; padding:4px 9px; border-radius:8px; background:var(--paper-warm); color:var(--muted); }
+  .chip.time-ok{ background:var(--forest-soft); color:var(--forest); }
+  .chip.time-warn{ background:var(--marigold-soft); color:var(--marigold-deep); }
+  .chip.time-danger{ background:var(--crimson-soft); color:var(--crimson); }
+  .bottom-spacer{ height:110px; }
+
+  /* ---------- Onboarding ---------- */
+  #onboarding{ background:
+    radial-gradient(circle at 12% 6%, rgba(239,162,58,.28), transparent 42%),
+    radial-gradient(circle at 92% 78%, rgba(47,93,69,.18), transparent 46%),
+    var(--cream); }
+  .onb-illustration{ position:relative; width:236px; height:236px; margin:52px auto 0; display:flex; align-items:center; justify-content:center; }
+  .onb-illustration .ring{ position:absolute; inset:0; border-radius:50%; border:1.5px dashed rgba(217,98,43,.3); animation:spin 40s linear infinite; }
+  @keyframes spin{ from{ transform:rotate(0deg);} to{ transform:rotate(360deg);} }
+  .onb-illustration .plate-outer{
+    width:200px; height:200px; border-radius:50%;
+    background:var(--paper); box-shadow:var(--shadow-pop);
+    display:flex; align-items:center; justify-content:center; position:relative;
+  }
+  .onb-illustration .plate-inner{ width:170px; height:170px; border-radius:50%; position:relative; overflow:hidden; }
+  .wordmark{ text-align:center; font-family:var(--font-display); font-size:40px; font-weight:700; letter-spacing:1px; margin-top:24px; color:var(--forest-deep); }
+  .tagline{ text-align:center; font-family:var(--font-display); font-style:italic; font-size:16.5px; color:var(--terracotta-deep); font-weight:600; margin-top:8px; padding:0 24px; }
+  .subtext{ text-align:center; font-size:12.5px; color:var(--muted); margin-top:12px; padding:0 40px; line-height:1.6; }
+  .dots-row{ display:flex; justify-content:center; gap:6px; margin-top:26px; }
+  .dots-row .d{ height:6px; border-radius:3px; background:var(--line); }
+  .dots-row .d.on{ width:18px; background:var(--terracotta); }
+  .dots-row .d:not(.on){ width:6px; }
+
+  /* ---------- Login ---------- */
+  .login-header{ padding:66px 24px 0; }
+  .login-title{ font-family:var(--font-display); font-size:27px; font-weight:700; margin-top:18px; }
+  .login-sub{ font-size:13.5px; color:var(--muted); margin-top:8px; line-height:1.6; }
+  .trust-row{
+    margin:20px 24px 0; display:flex; gap:8px; align-items:center;
+    background:var(--forest-soft); border:1px solid #cfe3d3;
+    border-radius:14px; padding:12px 14px; font-size:11.5px; color:var(--forest-deep); line-height:1.5;
+  }
+
+  /* ---------- Jelajah (Feed) ---------- */
+  .loc-hood{ background:linear-gradient(180deg, var(--marigold-soft) 0%, var(--cream) 100%); border-radius:0 0 32px 32px; padding-bottom:6px; }
+  .loc-bar{ display:flex; align-items:center; justify-content:space-between; padding:16px 24px 0; }
+  .loc-bar .place{ display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:700; color:var(--ink); }
+  .loc-bar .place .ic{ color:var(--terracotta); width:18px; height:18px; }
+  .loc-actions{ display:flex; gap:8px; }
+  .segmented{
+    margin:16px 24px 0; display:flex; gap:4px; background:rgba(255,255,255,.6); border:1px solid var(--line);
+    border-radius:14px; padding:4px;
+  }
+  .segmented .opt{
+    flex:1; text-align:center; padding:10px 0; border-radius:10px; font-size:11.5px; font-weight:700;
+    color:var(--muted); cursor:pointer;
+  }
+  .segmented .opt.active{ background:var(--white); color:var(--terracotta); box-shadow:var(--shadow-card); }
+  .feed-toolbar{ display:flex; align-items:center; justify-content:space-between; padding:14px 24px 0; }
+  .feed-count{ font-size:12px; color:var(--muted); font-weight:600; }
+  .map-toggle{ display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; color:var(--forest); background:var(--forest-soft); border-radius:20px; padding:7px 12px; cursor:pointer; }
+  .feed-list{ margin:12px 24px 0; display:flex; flex-direction:column; gap:12px; }
+
+  /* ---------- Posting Surplus (camera-first) ---------- */
+  .capture-box{
+    margin:18px 24px 0; height:200px; border-radius:22px;
+    position:relative; overflow:hidden; box-shadow:var(--shadow-pop);
+  }
+  .capture-box .cam-icon{
+    width:52px; height:52px; border-radius:50%; background:rgba(42,28,18,.35); color:#fff; backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .capture-box .cam-label{ font-size:12px; font-weight:700; color:#fff; background:rgba(42,28,18,.35); padding:5px 12px; border-radius:20px; backdrop-filter:blur(4px); }
+  .capture-overlay{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; z-index:2; }
+  .stepper-qty{ display:flex; align-items:center; justify-content:space-between; background:var(--paper-warm); border:1px solid var(--line); border-radius:14px; padding:10px 14px; }
+  .stepper-qty .qbtn{ width:34px; height:34px; border-radius:10px; background:var(--paper); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--terracotta); font-size:16px; }
+  .stepper-qty .qval{ font-family:var(--font-display); font-size:16px; font-weight:700; color:var(--ink); }
+  .time-chip-row{ display:flex; gap:8px; }
+  .time-chip{ flex:1; text-align:center; padding:11px 0; border-radius:12px; border:1.5px solid var(--line); font-size:11.5px; font-weight:700; color:var(--muted); }
+  .time-chip.active{ border-color:var(--marigold); background:var(--marigold-soft); color:var(--marigold-deep); }
+  .safety-chip{ display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:14px; background:var(--forest-soft); }
+  .safety-chip .tick{ width:22px; height:22px; border-radius:50%; background:var(--forest); color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .safety-chip span{ font-size:12px; color:var(--forest-deep); font-weight:600; }
+
+  /* ---------- Detail & Klaim ---------- */
+  .hero-photo{ margin:0; height:240px; position:relative; }
+  .hero-photo .dish-frame{ width:100%; height:100%; border-radius:0 0 28px 28px; }
+  .hero-overlay-top{ position:absolute; top:20px; left:20px; right:20px; display:flex; justify-content:space-between; z-index:3; }
+  .hero-overlay-top .back-btn, .hero-overlay-top .icon-btn{ background:rgba(255,255,255,.92); border:none; }
+  .detail-body{ padding:18px 24px 0; position:relative; }
+  .detail-title{ font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--ink); margin-top:6px; }
+  .donor-row{ display:flex; align-items:center; gap:10px; margin-top:14px; }
+  .donor-avatar{ width:40px; height:40px; border-radius:50%; background:var(--forest); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:700; font-size:14px; flex-shrink:0; }
+  .donor-name{ font-size:13px; font-weight:700; color:var(--ink); }
+  .donor-rating{ font-size:11px; color:var(--muted); margin-top:1px; }
+  .meta-row{ display:flex; gap:8px; margin-top:16px; }
+  .meta-pill{ flex:1; background:var(--paper-warm); border-radius:14px; padding:10px; text-align:center; }
+  .meta-pill .v{ font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--ink); }
+  .meta-pill .l{ font-size:9px; color:var(--muted); margin-top:2px; text-transform:uppercase; letter-spacing:.4px; }
+  .safety-summary{ display:flex; align-items:center; gap:10px; margin-top:16px; padding:12px 14px; border-radius:14px; background:var(--forest-soft); }
+  .safety-summary .ic{ color:var(--forest); }
+  .safety-summary span{ font-size:12px; color:var(--forest-deep); font-weight:600; }
+  .pickup-card{ margin-top:16px; padding:18px; border-radius:18px; background:var(--marigold-soft); border:1.5px dashed var(--marigold); text-align:center; position:relative; }
+  .pickup-card .code{ font-family:var(--font-display); font-size:28px; font-weight:700; letter-spacing:7px; color:var(--marigold-deep); margin-top:4px; }
+  .pickup-card .lab{ font-size:10px; color:var(--marigold-deep); font-weight:800; text-transform:uppercase; letter-spacing:.6px; }
+  .detail-actions{ margin:18px 0 0; display:flex; gap:10px; }
+  .detail-actions .btn{ flex:1; }
+  .disclaimer{ margin:14px 0 0; font-size:11px; color:var(--muted-light); line-height:1.6; }
+
+  /* ---------- Dampak & Komunitas ---------- */
+  .impact-hero{ margin:16px 24px 0; padding:24px; border-radius:24px; background:linear-gradient(155deg, var(--forest), var(--forest-deep)); color:#fff; position:relative; overflow:hidden; }
+  .impact-hero::before{ content:""; position:absolute; width:180px; height:180px; border-radius:50%; background:rgba(255,255,255,.06); right:-50px; top:-60px; }
+  .impact-hero .lab{ font-size:10.5px; font-weight:700; letter-spacing:.7px; color:#bcdbc7; text-transform:uppercase; position:relative; }
+  .impact-hero .num{ font-family:var(--font-display); font-size:42px; font-weight:700; margin-top:6px; position:relative; }
+  .impact-hero .sub{ font-size:12px; color:#bcdbc7; margin-top:4px; position:relative; }
+  .impact-stats{ display:flex; gap:10px; margin-top:16px; position:relative; }
+  .impact-stats .s{ flex:1; background:rgba(255,255,255,.12); border-radius:12px; padding:10px; text-align:center; }
+  .impact-stats .s .v{ font-family:var(--font-display); font-size:17px; font-weight:700; }
+  .impact-stats .s .l{ font-size:9px; color:#bcdbc7; margin-top:2px; }
+  .badge-row{ display:flex; gap:10px; padding:0 24px; }
+  .achv{ flex:1; background:var(--paper); border:1px solid var(--line); border-radius:16px; padding:14px 8px; display:flex; flex-direction:column; align-items:center; gap:6px; box-shadow:var(--shadow-card); }
+  .achv .ic-wrap{ width:38px; height:38px; border-radius:12px; background:var(--marigold-soft); color:var(--marigold-deep); display:flex; align-items:center; justify-content:center; }
+  .achv span{ font-size:9.5px; font-weight:700; color:var(--muted); text-align:center; line-height:1.25; }
+  .community-card{ margin:0 24px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+  .community-card .top{ display:flex; align-items:center; gap:10px; }
+  .community-card .icon{ width:44px; height:44px; border-radius:14px; background:var(--terracotta-soft); color:var(--terracotta-deep); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .community-card .t{ font-family:var(--font-display); font-size:14.5px; font-weight:600; color:var(--ink); }
+  .community-card .d{ font-size:11px; color:var(--muted); margin-top:1px; }
+  .progress-track{ height:8px; border-radius:4px; background:var(--paper-warm); overflow:hidden; }
+  .progress-fill{ height:100%; background:var(--marigold); border-radius:4px; }
+  .progress-label{ display:flex; justify-content:space-between; font-size:10.5px; color:var(--muted); }
+
+  footer.credit{ max-width:1400px; margin:8px auto 60px; padding:0 28px; font-size:11px; color:var(--muted-light); text-align:center; }
+</style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <div class="brand">
+      <div class="mark">S</div>
+      <div>
+        <div class="title">SISA — Prototipe UI</div>
+        <div class="sub">Sistem Informasi Surplus pAngan</div>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="crumb" id="crumb">Layar aktif: Onboarding</div>
+      <button class="btn-toolbar ghost" id="resetBtn">Reset ke Awal</button>
+      <button class="btn-toolbar" id="modeBtn">Tampilkan Semua Layar</button>
+    </div>
+  </div>
+  <p class="hint">Mode <b>Prototipe Interaktif</b>: klik tombol atau ikon navigasi di dalam layar untuk berpindah. Mode <b>Semua Layar</b>: menampilkan ke-6 layar sekaligus untuk dokumentasi UAT. Palet "golden hour market" (terakota, marigold, hijau hutan) dan tipografi Fraunces/Plus Jakarta Sans dipakai konsisten untuk membedakan identitas SISA dari studi kasus sebelumnya.</p>
+
+  <main class="stage mode-prototype" id="stage">
+
+    <!-- 01 ONBOARDING -->
+    <div class="phone-wrap" data-screen="onboarding">
+      <div class="frame-label"><span class="n">1</span>Onboarding</div>
+      <div class="phone is-active" id="onboarding">
+        <div class="notch"></div>
+        <div class="screen-scroll">
+          <div class="status-row"><span>9:41</span><span class="icons">●●●</span></div>
+          <div class="onb-illustration">
+            <div class="ring"></div>
+            <div class="plate-outer">
+              <div class="plate-inner">
+                <div class="dish-frame nasiayam round" style="width:100%; height:100%; position:absolute; inset:0;">
+                  <div class="shine"></div>
+                  <div class="dish">
+                    <div class="dish__steam"><span></span><span></span><span></span></div>
+                    <div class="dish__rice"></div>
+                    <div class="dish__protein p1"></div>
+                    <div class="dish__protein p2"></div>
+                    <div class="dish__garnish"></div>
+                    <div class="dish__chili"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="wordmark">SISA</div>
+          <div class="tagline">Dari sisa, jadi berkah untuk sesama.</div>
+          <div class="subtext">Jelajahi surplus makanan di sekitarmu, atau bagikan surplusmu sendiri lewat foto — dalam hitungan detik.</div>
+          <div class="dots-row"><span class="d on"></span><span class="d"></span><span class="d"></span></div>
+          <div style="padding:30px 24px 0;">
+            <button class="btn btn-primary btn-block" data-nav="login">Mulai Jelajah</button>
+          </div>
+          <div style="text-align:center; margin-top:16px;">
+            <span data-nav="login" style="font-size:13.5px; font-weight:700; color:var(--forest); cursor:pointer;">Sudah punya akun? Masuk</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 02 LOGIN -->
+    <div class="phone-wrap" data-screen="login">
+      <div class="frame-label"><span class="n">2</span>Masuk</div>
+      <div class="phone" id="login">
+        <div class="notch"></div>
+        <div class="screen-scroll">
+          <div class="status-row"><span>9:41</span><span class="icons">●●●</span></div>
+          <div class="login-header">
+            <div class="back-btn" data-nav="onboarding">
+              <svg class="ic ic-sm" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+            </div>
+            <div class="login-title">Masuk ke SISA</div>
+            <div class="login-sub">Gunakan nomor HP terdaftar untuk mulai berbagi atau menemukan surplus makanan.</div>
+          </div>
+
+          <div style="margin:26px 24px 0;">
+            <span class="field-label">Nomor HP / Email</span>
+            <div class="field"><input type="text" placeholder="Contoh: 0812xxxxxxxx"></div>
+          </div>
+          <div style="margin:16px 24px 0;">
+            <span class="field-label">Kata Sandi</span>
+            <div class="field"><input type="password" placeholder="••••••••"></div>
+          </div>
+          <div style="text-align:right; margin:10px 24px 0;">
+            <span style="font-size:12px; color:var(--muted);">Lupa kata sandi?</span>
+          </div>
+
+          <div style="margin:22px 24px 0;">
+            <button class="btn btn-primary btn-block" data-nav="jelajah">Masuk</button>
+          </div>
+          <div style="text-align:center; margin-top:14px;">
+            <span style="font-size:13px; color:var(--muted);">Belum punya akun? </span>
+            <span style="font-size:13px; font-weight:700; color:var(--forest); cursor:pointer;">Daftar Sekarang</span>
+          </div>
+
+          <div class="trust-row">
+            <svg class="ic ic-sm" viewBox="0 0 24 24" style="color:var(--forest); flex-shrink:0;"><path d="M12 3l7 4v5c0 4.5-3 8-7 9-4-1-7-4.5-7-9V7l7-4z"/></svg>
+            Data kamu terenkripsi. Checklist keamanan pangan mengikuti pedoman BPOM &amp; Kemenkes.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 03 JELAJAH (FEED) -->
+    <div class="phone-wrap" data-screen="jelajah">
+      <div class="frame-label"><span class="n">3</span>Jelajah (Feed &amp; Peta)</div>
+      <div class="phone" id="jelajah">
+        <div class="notch"></div>
+        <div class="screen-scroll">
+          <div class="loc-hood">
+            <div class="status-row"><span>9:41</span><span class="icons">●●●</span></div>
+            <div class="loc-bar">
+              <div class="place">
+                <svg class="ic" viewBox="0 0 24 24"><path d="M12 21s7-6.6 7-12a7 7 0 0 0-14 0c0 5.4 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>
+                Jakarta Timur &middot; 2 km
+              </div>
+              <div class="loc-actions">
+                <div class="icon-btn"><svg class="ic ic-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+                <div class="icon-btn"><svg class="ic ic-sm" viewBox="0 0 24 24"><path d="M12 22a2 2 0 0 0 2-2H10a2 2 0 0 0 2 2z"/><path d="M18 16v-5a6 6 0 1 0-12 0v5l-2 2h16l-2-2z"/></svg><span class="ping"></span></div>
+              </div>
+            </div>
+
+            <div class="segmented">
+              <div class="opt active">Surplus Terdekat</div>
+              <div class="opt" data-nav="dampak">Permintaan Komunitas</div>
+            </div>
+          </div>
+
+          <div class="feed-toolbar">
+            <span class="feed-count">12 surplus aktif di sekitarmu</span>
+            <div class="map-toggle"><svg class="ic ic-sm" viewBox="0 0 24 24"><path d="M1 6v16l7-4 8 4 7-4V0l-7 4-8-4-7 4z"/><path d="M8 2v16M16 6v16"/></svg>Peta</div>
+          </div>
+
+          <div class="feed-list">
+            <div class="card food-card" data-nav="detail-surplus">
+              <div class="dish-frame nasiayam">
+                <div class="shine"></div>
+                <div class="dish">
+                  <div class="dish__steam"><span></span><span></span><span></span></div>
+                  <div class="dish__rice"></div>
+                  <div class="dish__protein p1"></div>
+                  <div class="dish__protein p2"></div>
+                  <div class="dish__garnish"></div>
+                </div>
+              </div>
+              <div class="fc-body">
+                <div class="fc-title">Nasi + Ayam Goreng</div>
+                <div class="fc-sub">Warteg Bu Tini &middot; 450m</div>
+                <div class="fc-meta">
+                  <span class="chip">15 porsi</span>
+                  <span class="chip time-danger">27 menit lagi</span>
+                </div>
+              </div>
+            </div>
+            <div class="card food-card" data-nav="detail-surplus">
+              <div class="dish-frame roti">
+                <div class="shine"></div>
+                <div class="dish">
+                  <div class="dish__box"></div>
+                  <div class="dish__bun b1"></div>
+                  <div class="dish__bun b2"></div>
+                  <div class="dish__ribbon"></div>
+                </div>
+              </div>
+              <div class="fc-body">
+                <div class="fc-title">Roti &amp; Kue Ulang Tahun</div>
+                <div class="fc-sub">Kantor PT Sejahtera &middot; 1.2 km</div>
+                <div class="fc-meta">
+                  <span class="chip">8 kotak</span>
+                  <span class="chip time-warn">1 jam lagi</span>
+                </div>
+              </div>
+            </div>
+            <div class="card food-card" data-nav="detail-surplus">
+              <div class="dish-frame kotak">
+                <div class="shine"></div>
+                <div class="dish">
+                  <div class="dish__box2"></div>
+                  <div class="dish__leaf"></div>
+                  <div class="dish__rice2"></div>
+                </div>
+              </div>
+              <div class="fc-body">
+                <div class="fc-title">Nasi Kotak Hajatan</div>
+                <div class="fc-sub">Balai RW 05 &middot; 2 km</div>
+                <div class="fc-meta">
+                  <span class="chip">30 porsi</span>
+                  <span class="chip time-ok">2 jam lagi</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bottom-spacer"></div>
+        </div>
+        <div class="nav-bar">
+          <div class="nav-item active" data-nav="jelajah">
+            <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <span>Jelajah</span>
+          </div>
+          <div class="nav-item" data-nav="detail-surplus">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M20 21a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9l8-6 8 6z"/></svg>
+            <span>Riwayat</span>
+          </div>
+          <div class="nav-fab" data-nav="posting">
+            <svg class="ic" viewBox="0 0 24 24" style="stroke:#fff;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+          <div class="nav-item" data-nav="dampak">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4.5 8-12a8 8 0 0 0-16 0c0 7.5 8 12 8 12z"/><path d="M12 14V6"/></svg>
+            <span>Dampak</span>
+          </div>
+          <div class="nav-item" data-nav="jelajah">
+            <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+            <span>Profil</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 04 POSTING SURPLUS -->
+    <div class="phone-wrap" data-screen="posting">
+      <div class="frame-label"><span class="n">4</span>Posting Surplus (Kamera)</div>
+      <div class="phone" id="posting">
+        <div class="notch"></div>
+        <div class="screen-scroll">
+          <div class="status-row"><span>9:41</span><span class="icons">●●●</span></div>
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px 0;">
+            <div class="back-btn" data-nav="jelajah">
+              <svg class="ic ic-sm" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+            </div>
+            <span style="font-family:var(--font-display); font-size:15px; font-weight:600; color:var(--ink);">Posting Surplus</span>
+            <div style="width:38px;"></div>
+          </div>
+
+          <div class="capture-box">
+            <div class="dish-frame nasiayam" style="position:absolute; inset:0; border-radius:22px;">
+              <div class="shine"></div>
+              <div class="dish">
+                <div class="dish__rice"></div>
+                <div class="dish__protein p1"></div>
+                <div class="dish__protein p2"></div>
+                <div class="dish__garnish"></div>
+              </div>
+            </div>
+            <div class="capture-overlay">
+              <div class="cam-icon">
+                <svg class="ic" viewBox="0 0 24 24" style="stroke:#fff;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              </div>
+              <div class="cam-label">Foto tersimpan &middot; Ganti Foto</div>
+            </div>
+          </div>
+
+          <div style="margin:16px 24px 0;">
+            <span class="field-label">Jenis Makanan</span>
+            <div class="field"><input type="text" value="Nasi + Ayam Goreng"></div>
+          </div>
+
+          <div style="margin:14px 24px 0;">
+            <span class="field-label">Jumlah Porsi</span>
+            <div class="stepper-qty">
+              <div class="qbtn">–</div>
+              <div class="qval">15 porsi</div>
+              <div class="qbtn">+</div>
+            </div>
+          </div>
+
+          <div style="margin:14px 24px 0;">
+            <span class="field-label">Batas Waktu Aman Diambil</span>
+            <div class="time-chip-row">
+              <div class="time-chip">30 mnt</div>
+              <div class="time-chip active">1 jam</div>
+              <div class="time-chip">2 jam</div>
+            </div>
+          </div>
+
+          <div style="margin:16px 24px 0; display:flex; flex-direction:column; gap:8px;">
+            <span class="field-label" style="margin-bottom:0;">Checklist Keamanan Pangan</span>
+            <div class="safety-chip"><span class="tick"><svg class="ic ic-sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="M20 6L9 17l-5-5"/></svg></span><span>Dimasak/dikemas kurang dari 2 jam lalu</span></div>
+            <div class="safety-chip"><span class="tick"><svg class="ic ic-sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="M20 6L9 17l-5-5"/></svg></span><span>Disimpan tertutup & tidak terkontaminasi</span></div>
+            <div class="safety-chip"><span class="tick"><svg class="ic ic-sm" viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="M20 6L9 17l-5-5"/></svg></span><span>Tidak mengandung bahan berisiko tinggi</span></div>
+          </div>
+
+          <div style="margin:20px 24px 0;">
+            <button class="btn btn-primary btn-block" data-nav="detail-surplus">Posting Sekarang</button>
+          </div>
+          <div class="bottom-spacer"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 05 DETAIL & KLAIM -->
+    <div class="phone-wrap" data-screen="detail-surplus">
+      <div class="frame-label"><span class="n">5</span>Detail &amp; Klaim</div>
+      <div class="phone" id="detail-surplus">
+        <div class="notch"></div>
+        <div class="screen-scroll">
+          <div class="hero-photo">
+            <div class="dish-frame nasiayam">
+              <div class="shine"></div>
+              <div class="dish">
+                <div class="dish__steam"><span></span><span></span><span></span></div>
+                <div class="dish__rice"></div>
+                <div class="dish__protein p1"></div>
+                <div class="dish__protein p2"></div>
+                <div class="dish__garnish"></div>
+                <div class="dish__chili"></div>
+              </div>
+            </div>
+            <div class="hero-overlay-top">
+              <div class="back-btn" data-nav="jelajah"><svg class="ic ic-sm" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></div>
+              <div class="icon-btn"><svg class="ic ic-sm" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+            </div>
+          </div>
+          <div class="detail-body">
+            <span class="badge danger"><span class="dot"></span>27 MENIT LAGI</span>
+            <div class="detail-title">Nasi + Ayam Goreng</div>
+            <div class="donor-row">
+              <div class="donor-avatar">BT</div>
+              <div>
+                <div class="donor-name">Warteg Bu Tini</div>
+                <div class="donor-rating">★ 4.9 &middot; 32 donasi tersalurkan</div>
+              </div>
+            </div>
+            <div class="meta-row">
+              <div class="meta-pill"><div class="v">15</div><div class="l">Porsi</div></div>
+              <div class="meta-pill"><div class="v">450m</div><div class="l">Jarak</div></div>
+              <div class="meta-pill"><div class="v">27&nbsp;mnt</div><div class="l">Tersisa</div></div>
+            </div>
+            <div class="safety-summary">
+              <svg class="ic ic-sm" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+              <span>Sudah lolos checklist keamanan pangan</span>
+            </div>
+            <div class="pickup-card">
+              <div class="lab">Kode Pickup Kamu</div>
+              <div class="code">4821</div>
+            </div>
+            <div class="detail-actions">
+              <button class="btn btn-secondary">Chat Donatur</button>
+              <button class="btn btn-primary" data-nav="dampak">Sudah Diambil</button>
+            </div>
+            <p class="disclaimer">Kode pickup berlaku 15 menit. Tunjukkan ke donatur saat penjemputan. Selalu periksa kondisi fisik makanan sebelum dikonsumsi.</p>
+          </div>
+          <div class="bottom-spacer"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 06 DAMPAK & KOMUNITAS -->
+    <div class="phone-wrap" data-screen="dampak">
+      <div class="frame-label"><span class="n">6</span>Dampak &amp; Komunitas</div>
+      <div class="phone" id="dampak">
+        <div class="notch"></div>
+        <div class="screen-scroll">
+          <div class="status-row"><span>9:41</span><span class="icons">●●●</span></div>
+          <div class="loc-bar" style="padding-top:6px;">
+            <div class="place" style="font-family:var(--font-display); font-size:16px; font-weight:600;">Dampak Kamu</div>
+            <div class="back-btn" data-nav="jelajah"><svg class="ic ic-sm" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></div>
+          </div>
+
+          <div class="impact-hero">
+            <div class="lab">Bulan Ini</div>
+            <div class="num">42 kg</div>
+            <div class="sub">makanan berhasil diselamatkan &amp; disalurkan</div>
+            <div class="impact-stats">
+              <div class="s"><div class="v">18</div><div class="l">Donasi</div></div>
+              <div class="s"><div class="v">96</div><div class="l">Porsi</div></div>
+              <div class="s"><div class="v">7 hari</div><div class="l">Beruntun</div></div>
+            </div>
+          </div>
+
+          <div style="font-size:12px; font-weight:700; margin:20px 24px 10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;">Pencapaian</div>
+          <div class="badge-row">
+            <div class="achv"><div class="ic-wrap"><svg class="ic ic-sm" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M9 14l-2 7 5-3 5 3-2-7"/></svg></div><span>Donatur Aktif</span></div>
+            <div class="achv"><div class="ic-wrap"><svg class="ic ic-sm" viewBox="0 0 24 24"><path d="M12 22s8-4.5 8-12a8 8 0 0 0-16 0c0 7.5 8 12 8 12z"/></svg></div><span>Peduli Bumi</span></div>
+            <div class="achv"><div class="ic-wrap"><svg class="ic ic-sm" viewBox="0 0 24 24"><path d="M4 13a8 8 0 0 0 16 0"/><ellipse cx="12" cy="13" rx="8" ry="2.4"/></svg></div><span>100 Porsi+</span></div>
+          </div>
+
+          <div style="font-size:12px; font-weight:700; margin:22px 24px 10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;">Permintaan Komunitas</div>
+          <div class="card community-card">
+            <div class="top">
+              <div class="icon"><svg class="ic ic-sm" viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-6h6v6"/></svg></div>
+              <div>
+                <div class="t">Panti Asuhan Kasih Bunda</div>
+                <div class="d">Butuh 20 porsi/hari &middot; Bekasi</div>
+              </div>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:65%;"></div></div>
+            <div class="progress-label"><span>13 dari 20 porsi terpenuhi</span><span>65%</span></div>
+            <button class="btn btn-secondary btn-block" data-nav="posting">Bantu Penuhi</button>
+          </div>
+          <div style="height:16px;"></div>
+          <div class="card community-card">
+            <div class="top">
+              <div class="icon"><svg class="ic ic-sm" viewBox="0 0 24 24"><path d="M4 21V9l8-6 8 6v12"/><path d="M9 21v-6h6v6"/></svg></div>
+              <div>
+                <div class="t">Komunitas Peduli Kolong Jembatan</div>
+                <div class="d">Butuh 35 porsi/hari &middot; Jakarta Pusat</div>
+              </div>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:30%; background:var(--crimson);"></div></div>
+            <div class="progress-label"><span>10 dari 35 porsi terpenuhi</span><span>30%</span></div>
+            <button class="btn btn-secondary btn-block" data-nav="posting">Bantu Penuhi</button>
+          </div>
+
+          <div class="bottom-spacer"></div>
+        </div>
+        <div class="nav-bar">
+          <div class="nav-item" data-nav="jelajah">
+            <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <span>Jelajah</span>
+          </div>
+          <div class="nav-item" data-nav="detail-surplus">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M20 21a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9l8-6 8 6z"/></svg>
+            <span>Riwayat</span>
+          </div>
+          <div class="nav-fab" data-nav="posting">
+            <svg class="ic" viewBox="0 0 24 24" style="stroke:#fff;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+          <div class="nav-item active" data-nav="dampak">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M12 22s8-4.5 8-12a8 8 0 0 0-16 0c0 7.5 8 12 8 12z"/><path d="M12 14V6"/></svg>
+            <span>Dampak</span>
+          </div>
+          <div class="nav-item" data-nav="jelajah">
+            <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+            <span>Profil</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="credit">SISA — Prototipe UI/UX untuk Tugas Kelompok 3 (UX for Digital Business). Ilustrasi makanan dirender murni dengan CSS/SVG (tanpa aset foto eksternal) agar file tetap ringan &amp; portable. Tipografi: Fraunces (display) + Plus Jakarta Sans (UI).</footer>
+
+<script>
+  const screenLabels = {
+    onboarding: "Onboarding",
+    login: "Masuk",
+    jelajah: "Jelajah (Feed & Peta)",
+    posting: "Posting Surplus (Kamera)",
+    "detail-surplus": "Detail & Klaim",
+    dampak: "Dampak & Komunitas"
+  };
+  let current = "onboarding";
+  let mode = "prototype";
+
+  const stage = document.getElementById("stage");
+  const crumb = document.getElementById("crumb");
+  const modeBtn = document.getElementById("modeBtn");
+
+  function render(){
+    stage.className = "stage mode-" + mode;
+    document.querySelectorAll(".phone").forEach(p => {
+      p.classList.toggle("is-active", p.id === current || mode === "gallery");
+    });
+    crumb.textContent = "Layar aktif: " + screenLabels[current];
+    modeBtn.textContent = mode === "prototype" ? "Tampilkan Semua Layar" : "Mode Prototipe Interaktif";
+  }
+
+  function goto(id){
+    current = id;
+    mode = "prototype";
+    render();
+    document.getElementById(id).scrollIntoView({ behavior:"smooth", block:"center", inline:"center" });
+  }
+
+  document.querySelectorAll("[data-nav]").forEach(el => {
+    el.addEventListener("click", () => goto(el.dataset.nav));
+  });
+
+  modeBtn.addEventListener("click", () => {
+    mode = mode === "prototype" ? "gallery" : "prototype";
+    render();
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    current = "onboarding";
+    mode = "prototype";
+    render();
+    window.scrollTo({ top:0, behavior:"smooth" });
+  });
+
+  render();
+</script>
+</body>
+</html>
